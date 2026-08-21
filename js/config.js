@@ -1,2 +1,2 @@
-const SUPABASE_URL ='https://ttaforobneenpcoashlp.supabase.co/rest/v1/';
+const SUPABASE_URL ='https://ttaforobneenpcoashlp.supabase.co';
 const SUPABASE_ANON_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0YWZvcm9ibmVlbnBjb2FzaGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTgzOTgsImV4cCI6MjEwMjg3NDM5OH0.Otx6WTRicgUImAMUJtyMSzbvUVHdczKkrgK_JnbFh9M';
