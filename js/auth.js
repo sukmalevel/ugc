@@ -16,7 +16,7 @@ async function handleLogin() {
         return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
         errorEl.innerText = error.message;
         errorEl.classList.remove('hidden');
@@ -41,7 +41,7 @@ async function handleRegister() {
         return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: { data: { username: username } }
@@ -59,12 +59,12 @@ async function handleRegister() {
 }
 
 async function handleLogout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     location.reload();
 }
 
 async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
         document.getElementById('authOverlay').classList.add('hidden');
