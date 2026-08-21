@@ -78,11 +78,24 @@ async function enhanceProductDescription() {
 
 // ================= MAIN WORKFLOW (GENERATE SCRIPT) =================
 async function runStoryboardWorkflow() {
-    const productDesc = document.getElementById('productDesc').value.trim();
-    if (!productDesc) { showToast("Masukkan deskripsi produk!", "error"); return; }
+    // 1. Safe check untuk elemen productDesc
+    const productDescEl = document.getElementById('productDesc');
+    if (!productDescEl) {
+        showToast("Elemen deskripsi produk tidak ditemukan di HTML!", "error");
+        return;
+    }
+    const productDesc = productDescEl.value.trim();
+    if (!productDesc) { 
+        showToast("Masukkan deskripsi produk!", "error"); 
+        return; 
+    }
     
     const apiKey = getNextApiKey();
-    if (!apiKey) { showToast("API Key tidak tersedia! Klik icon Key di header.", "error"); openApiKeyModal(); return; }
+    if (!apiKey) { 
+        showToast("API Key tidak tersedia! Klik icon Key di header.", "error"); 
+        openApiKeyModal(); 
+        return; 
+    }
 
     const videoModel = document.getElementById('videoModel').value;
     const storyboardCount = parseInt(document.getElementById('storyboardCount').value) || 1;
@@ -104,17 +117,24 @@ async function runStoryboardWorkflow() {
     const femaleVoices = ['Zephyr', 'Leda', 'Sulafat'];
     const genderInstructions = femaleVoices.includes(ttsVoice) ? 'using a female voice actor' : 'using a male voice actor';
 
-    document.getElementById('emptyState').classList.add('hidden');
-    document.getElementById('storyboardResult').classList.add('hidden');
-    document.getElementById('workflowLoader').classList.remove('hidden');
+    // 2. SAFE DOM MANIPULATION (Mencegah error 'null')
+    const emptyState = document.getElementById('emptyState');
+    const storyboardResult = document.getElementById('storyboardResult');
+    const workflowLoader = document.getElementById('workflowLoader');
 
+    if (emptyState) emptyState.classList.add('hidden');
+    if (storyboardResult) storyboardResult.classList.add('hidden');
+    if (workflowLoader) workflowLoader.classList.remove('hidden');
+
+    // Reset character lock if not manual
     if (!characterReferenceImage || !characterReferenceImage.manualUpload) {
         characterReferenceImage = null;
-        document.getElementById('characterLockPanel').classList.add('hidden');
+        const lockPanel = document.getElementById('characterLockPanel');
+        if (lockPanel) lockPanel.classList.add('hidden');
     }
 
     try {
-        // SYSTEM PROMPT (Sama persis seperti kode asli)
+        // SYSTEM PROMPT (Sama seperti sebelumnya, pastikan kamu punya versi lengkapnya di file kamu)
         const systemPrompt = `Kamu adalah pakar kreatif pemasaran UGC (User Generated Content) dan pembuat naskah iklan digital terkemuka di Asia Tenggara.
 Tugas kamu adalah membuat naskah & storyboard terstruktur tinggi untuk video affiliate produk.
 Bahasa output copywriting, dialog, teks, wajib menggunakan Bahasa Indonesia yang sangat asik, persuasif, dan memicu pembelian.
@@ -237,7 +257,6 @@ Voiceover:\
 \\\"[MENGGABUNGKAN HANYA BARIS SCENE YANG MEMILIKI VO SECARA BERURUTAN KRONOLOGIS SEBAGAI SATU PARAGRAF. TOTAL DI SINI WAJIB BERKISAR ANTARA 15 HINGGA 20 KATA. DO NOT hallucinate any other lines]\\\""
 }
 ]}`;
-
         const userQuery = `Buat ${storyboardCount} alternatif storyboard berseri/berkelanjutan yang saling menyambung secara kronologis dari awal sampai akhir.
 Masing-masing storyboard memiliki ${sceneCount} adegan dengan total durasi video pas ${adDuration} detik.
 Rasio Video: ${ratio}.
@@ -315,7 +334,8 @@ ATURAN VOICEOVER (PENTING):
         activeStoryboardData = JSON.parse(responseText);
         selectedStoryboardIndex = 0;
 
-        document.getElementById('workflowLoader').classList.add('hidden');
+        // Update UI setelah berhasil
+        if (workflowLoader) workflowLoader.classList.add('hidden');
         renderStoryboardTabs();
         renderSelectedStoryboard();
         
@@ -325,8 +345,8 @@ ATURAN VOICEOVER (PENTING):
     } catch (error) {
         console.error(error);
         showToast("Error: " + error.message, "error");
-        document.getElementById('emptyState').classList.remove('hidden');
-        document.getElementById('workflowLoader').classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (workflowLoader) workflowLoader.classList.add('hidden');
     }
 }
 
