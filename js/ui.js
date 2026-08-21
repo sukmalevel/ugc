@@ -1,73 +1,96 @@
-let apiKeysCache = [];
-let apiKeyIndex = 0;
+function showToast(message, type = "success") {
+    const toast = document.getElementById('toastNotification');
+    const iconContainer = document.getElementById('toastIconContainer');
+    const icon = document.getElementById('toastIcon');
+    const msgNode = document.getElementById('toastMessage');
+    msgNode.innerText = message;
+    
+    if (type === "success") {
+        iconContainer.className = "w-7 h-7 rounded-lg bg-emerald-500 text-zinc-950 flex items-center justify-center";
+        icon.className = "fa-solid fa-check";
+    } else if (type === "error") {
+        iconContainer.className = "w-7 h-7 rounded-lg bg-red-500 text-white flex items-center justify-center";
+        icon.className = "fa-solid fa-triangle-exclamation";
+    } else {
+        iconContainer.className = "w-7 h-7 rounded-lg bg-amber-400 text-zinc-950 flex items-center justify-center";
+        icon.className = "fa-solid fa-info";
+    }
+    
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+    }, 3000);
+}
 
-async function loadApiKeys() {
-    if (!currentUser) return;
-    const { data, error } = await supabase
-        .from('user_api_keys')
-        .select('id, api_key_value, is_active')
-        .eq('user_id', currentUser.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: true });
+// Zoom & Drag Logic
+let currentZoom = 'fit';
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
 
-    if (error) console.error("Error loading API keys:", error);
-    else {
-        apiKeysCache = data.map(k => k.api_key_value);
-        updateApiKeyStatusUI();
+function setZoomMode(mode) { currentZoom = mode; applyZoom(); }
+function changeZoom(factor) {
+    const img = document.getElementById('compositeStoryboardImage');
+    const viewport = document.getElementById('imageViewport');
+    if (!img || !viewport) return;
+    if (currentZoom === 'fit') {
+        const scaleX = (viewport.clientWidth - 32) / (img.naturalWidth || 800);
+        const scaleY = (viewport.clientHeight - 32) / (img.naturalHeight || 1422);
+        currentZoom = Math.min(scaleX, scaleY, 1.0);
+    }
+    currentZoom = Math.max(0.1, Math.min(3.0, currentZoom + factor));
+    applyZoom();
+}
+function applyZoom() {
+    const img = document.getElementById('compositeStoryboardImage');
+    const wrapper = document.getElementById('imageWrapper');
+    const viewport = document.getElementById('imageViewport');
+    const zoomValText = document.getElementById('zoomVal');
+    if (!img || img.classList.contains('hidden') || !img.src) return;
+    
+    if (currentZoom === 'fit') {
+        viewport.classList.remove('overflow-auto');
+        viewport.classList.add('overflow-hidden');
+        const scaleX = (viewport.clientWidth - 32) / (img.naturalWidth || 800);
+        const scaleY = (viewport.clientHeight - 32) / (img.naturalHeight || 1422);
+        const fitScale = Math.min(scaleX, scaleY, 1.0);
+        wrapper.style.transform = `scale(${fitScale})`;
+        zoomValText.innerText = `Fit (${Math.round(fitScale * 100)}%)`;
+    } else {
+        viewport.classList.remove('overflow-hidden');
+        viewport.classList.add('overflow-auto');
+        wrapper.style.transform = `scale(${currentZoom})`;
+        zoomValText.innerText = `${Math.round(currentZoom * 100)}%`;
     }
 }
 
-function updateApiKeyStatusUI() {
-    const statusEl = document.getElementById('apiKeyStatus');
-    if (statusEl) statusEl.innerText = `${apiKeysCache.length} / 5 Key aktif`;
+const viewportContainer = document.getElementById('imageViewport');
+if (viewportContainer) {
+    viewportContainer.addEventListener('mousedown', (e) => {
+        if (currentZoom === 'fit') return;
+        isDragging = true;
+        viewportContainer.classList.add('cursor-grabbing');
+        startX = e.pageX - viewportContainer.offsetLeft;
+        startY = e.pageY - viewportContainer.offsetTop;
+        scrollLeft = viewportContainer.scrollLeft;
+        scrollTop = viewportContainer.scrollTop;
+    });
+    viewportContainer.addEventListener('mouseleave', () => { isDragging = false; viewportContainer.classList.remove('cursor-grabbing'); });
+    viewportContainer.addEventListener('mouseup', () => { isDragging = false; viewportContainer.classList.remove('cursor-grabbing'); });
+    viewportContainer.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - viewportContainer.offsetLeft;
+        const y = e.pageY - viewportContainer.offsetTop;
+        viewportContainer.scrollLeft = scrollLeft - (x - startX) * 1.5;
+        viewportContainer.scrollTop = scrollTop - (y - startY) * 1.5;
+    });
 }
 
-async function saveApiKeys() {
-    if (!currentUser) return;
-    const input = document.getElementById('apiKeyInput').value.trim();
-    const keys = input.split('\n').map(k => k.trim()).filter(k => k.length > 10);
-
-    if (keys.length > 5) {
-        showToast("Maksimal hanya 5 API Key!", "error");
-        return;
-    }
-
-    // Hapus key lama
-    await supabaseClient.from('user_api_keys').delete().eq('user_id', currentUser.id);
-
-    // Insert key baru
-    const inserts = keys.map(key => ({
-        user_id: currentUser.id,
-        api_key_value: key,
-        is_active: true
-    }));
-
-    if (inserts.length > 0) {
-        const { error } = await supabaseClient.from('user_api_keys').insert(inserts);
-        if (error) {
-            showToast("Gagal menyimpan API Key: " + error.message, "error");
-        } else {
-            apiKeysCache = keys;
-            updateApiKeyStatusUI();
-            showToast("API Key berhasil disimpan!");
-            closeApiKeyModal();
-        }
-    }
-}
-
-function getNextApiKey() {
-    if (apiKeysCache.length === 0) return null;
-    const key = apiKeysCache[apiKeyIndex % apiKeysCache.length];
-    apiKeyIndex++;
-    return key;
-}
-
-function openApiKeyModal() {
-    document.getElementById('apiKeyModal').classList.remove('hidden');
-    document.getElementById('apiKeyInput').value = apiKeysCache.join('\n');
-    updateApiKeyStatusUI();
-}
-
-function closeApiKeyModal() {
-    document.getElementById('apiKeyModal').classList.add('hidden');
-}
+function toggleDownloadDropdown() { document.getElementById('downloadDropdown').classList.toggle('hidden'); }
+window.addEventListener('click', function(e) {
+    const btn = document.querySelector('[onclick="toggleDownloadDropdown()"]');
+    const dropdown = document.getElementById('downloadDropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && e.target !== btn && !btn.contains(e.target)) dropdown.classList.add('hidden');
+});
