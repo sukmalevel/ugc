@@ -1,17 +1,21 @@
+// js/db.js
 let apiKeysCache = [];
 let apiKeyIndex = 0;
 
 async function loadApiKeys() {
     if (!currentUser) return;
-    const { data, error } = await supabase
+    
+    // PERHATIAN: Gunakan supabaseClient, BUKAN supabase
+    const { data, error } = await supabaseClient
         .from('user_api_keys')
         .select('id, api_key_value, is_active')
         .eq('user_id', currentUser.id)
         .eq('is_active', true)
         .order('created_at', { ascending: true });
 
-    if (error) console.error("Error loading API keys:", error);
-    else {
+    if (error) {
+        console.error("Error loading API keys:", error);
+    } else {
         apiKeysCache = data.map(k => k.api_key_value);
         updateApiKeyStatusUI();
     }
@@ -19,11 +23,14 @@ async function loadApiKeys() {
 
 function updateApiKeyStatusUI() {
     const statusEl = document.getElementById('apiKeyStatus');
-    if (statusEl) statusEl.innerText = `${apiKeysCache.length} / 5 Key aktif`;
+    if (statusEl) {
+        statusEl.innerText = `${apiKeysCache.length} / 5 Key aktif`;
+    }
 }
 
 async function saveApiKeys() {
     if (!currentUser) return;
+    
     const input = document.getElementById('apiKeyInput').value.trim();
     const keys = input.split('\n').map(k => k.trim()).filter(k => k.length > 10);
 
@@ -32,10 +39,9 @@ async function saveApiKeys() {
         return;
     }
 
-    // Hapus key lama
-    await supabase.from('user_api_keys').delete().eq('user_id', currentUser.id);
+    // PERHATIAN: Gunakan supabaseClient, BUKAN supabase
+    await supabaseClient.from('user_api_keys').delete().eq('user_id', currentUser.id);
 
-    // Insert key baru
     const inserts = keys.map(key => ({
         user_id: currentUser.id,
         api_key_value: key,
@@ -43,7 +49,9 @@ async function saveApiKeys() {
     }));
 
     if (inserts.length > 0) {
-        const { error } = await supabase.from('user_api_keys').insert(inserts);
+        // PERHATIAN: Gunakan supabaseClient, BUKAN supabase
+        const { error } = await supabaseClient.from('user_api_keys').insert(inserts);
+        
         if (error) {
             showToast("Gagal menyimpan API Key: " + error.message, "error");
         } else {
@@ -52,6 +60,12 @@ async function saveApiKeys() {
             showToast("API Key berhasil disimpan!");
             closeApiKeyModal();
         }
+    } else {
+        // Jika user menghapus semua key
+        apiKeysCache = [];
+        updateApiKeyStatusUI();
+        showToast("Semua API Key dihapus.", "info");
+        closeApiKeyModal();
     }
 }
 
