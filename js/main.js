@@ -333,7 +333,7 @@ ATURAN VOICEOVER (PENTING):
 // ================= SUPABASE SAVE =================
 async function saveProjectToSupabase(desc, config) {
     if (!currentUser || !activeStoryboardData) return;
-    const { error } = await supabase.from('storyboard_projects').insert({
+    const { error } = await supabaseClient.from('storyboard_projects').insert({
         user_id: currentUser.id,
         project_name: activeStoryboardData.storyboards[0].title || 'Untitled Project',
         product_description: desc,
